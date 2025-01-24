@@ -5,9 +5,11 @@ import http.server
 import socketserver
 import os
 
+# Define PORT and DIRECTORY for server
 PORT = 8501
 DIRECTORY = "."
 
+# Custom HTTP handler to serve files
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
@@ -17,10 +19,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.path = "/index.html"
         return super().do_GET()
 
+# Run HTTP server
 with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
     print(f"Serving on port {PORT}")
     httpd.serve_forever()
-
 
 # Function to load custom fonts
 def load_custom_fonts():
@@ -119,7 +121,6 @@ def create_initial_dataset():
         "Every three days", "Rarely", "Whenever I have a message", 
         "Every six months", "Whenever I have a message", "Every month", "Every week"
     ]
-
     response_probability = [
         "I don't reply", "30%", "I don't reply", "2%", 
         "I don't reply", "10%", "I don't reply", "I don't reply", 
@@ -128,7 +129,6 @@ def create_initial_dataset():
         "I don't reply", "I reply to all", "I reply to all", 
         "20%", "10%"
     ]
-
     data = pd.DataFrame({
         "Check Frequency": check_frequency,
         "Response Probability": response_probability
@@ -175,11 +175,9 @@ def generate_random_data(n):
         "Whenever I have a message", "Every three days", "Every week", "Every two weeks", 
         "Every month", "Every six months", "Once a year", "Rarely", "Never"
     ]
-
     response_probability_options = [
         "I reply to all", "I reply", "30%", "20%", "10%", "2%", "I don't reply"
     ]
-
     random_data = []
     for _ in range(n):
         random_frequency = random.choice(check_frequency_options)
@@ -189,118 +187,46 @@ def generate_random_data(n):
     random_df = pd.DataFrame(random_data, columns=["Check Frequency", "Response Probability"])
     return random_df
 
-# Function to display two tables side by side with statistics
+# Function to display tables side by side with statistics
 def display_side_by_side(data, random_data, combined_data):
-    col1, col2 = st.columns(2)  # Create two columns
-
-    # Left side - display the given dataset and success probability
+    col1, col2 = st.columns(2)
+    
+    # Left side - display the given dataset
     with col1:
         st.subheader("Given Dataset with Success Probability")
-        st.dataframe(data, use_container_width=True)
+        st.dataframe(data)
         st.write("\nSuccess Probability Calculation")
         st.write("Calculated based on Check Frequency and Response Probability")
-
-        # Display Initial Dataset Statistics below the table
-        initial_avg_check_frequency = data["Check Frequency Score"].mean()
-        initial_avg_response_probability = data["Response Probability Score"].mean()
-        initial_avg_read_probability = data["Read Probability"].mean()
-
         st.write("\nInitial Dataset Statistics:")
-        st.write(f"Average Check Frequency Score: {initial_avg_check_frequency}")
-        st.write(f"Average Response Probability Score: {initial_avg_response_probability}")
-        st.write(f"Average Read Probability: {initial_avg_read_probability}")
-
-        # Display the Day-Specific Probabilities for the left side
-        st.write("\nDay-Specific Probabilities for Initial Dataset:")
-        initial_day_probabilities = calculate_day_probabilities(data)
-        for day, prob in initial_day_probabilities.items():
-            st.write(f"{day}: {prob:.2f}%")
+        st.write(f"Average Check Frequency Score: {data['Check Frequency Score'].mean()}")
+        st.write(f"Average Response Probability Score: {data['Response Probability Score'].mean()}")
+        st.write(f"Average Read Probability: {data['Read Probability'].mean()}")
 
     # Right side - display current data, random data, and success probability
     with col2:
         st.subheader("Current and Random Data with Success Probability")
-        st.dataframe(random_data, use_container_width=True)
+        st.dataframe(random_data)
         st.write("\nSuccess Probability Calculation")
         st.write("Calculated based on Check Frequency and Response Probability")
-
-        # Display statistics for the right side
         st.write("\nCombined Dataset Statistics:")
-        combined_avg_check_frequency = combined_data["Check Frequency Score"].mean()
-        combined_avg_response_probability = combined_data["Response Probability Score"].mean()
-        combined_avg_read_probability = combined_data["Read Probability"].mean()
-
-        st.write(f"Average Check Frequency Score: {combined_avg_check_frequency}")
-        st.write(f"Average Response Probability Score: {combined_avg_response_probability}")
-        st.write(f"Average Read Probability: {combined_avg_read_probability}")
-
-        # Display Day-Specific Probabilities for the right side
-        st.write("\nDay-Specific Probabilities for Combined Dataset:")
-        combined_day_probabilities = calculate_day_probabilities(combined_data)
-        for day, prob in combined_day_probabilities.items():
-            st.write(f"{day}: {prob:.2f}%")
-
-# Calculate day-specific probabilities
-def calculate_day_probabilities(data):
-    days = {
-        "Day 1": 1,
-        "Day 3": 3,
-        "Day 7": 7,
-        "Day 14": 14,
-        "Day 30": 30,
-        "Day 90": 90,
-        "Day 180": 180
-    }
-
-    results = {}
-    for day_name, day_value in days.items():
-        decay_factor = max(0, 1 - (day_value / 365))  # Example decay model
-        data[f"{day_name} Probability"] = data["Read Probability"] * decay_factor
-        results[day_name] = data[f"{day_name} Probability"].mean()
-
-    return results
-
+        st.write(f"Average Check Frequency Score: {combined_data['Check Frequency Score'].mean()}")
+        st.write(f"Average Response Probability Score: {combined_data['Response Probability Score'].mean()}")
+        st.write(f"Average Read Probability: {combined_data['Read Probability'].mean()}")
+        
 # Main function to execute the process
 def main():
-    # Step 1: Load custom fonts
     load_custom_fonts()
-
-    # Step 2: Create initial dataset
     data = create_initial_dataset()
-
-    # Step 3: Map scores and calculate probabilities
     data = map_scores(data)
     data = calculate_read_probability(data)
-
-    # Step 4: Generate random logical data
+    
     random_data = generate_random_data(1000)
     random_data = map_scores(random_data)
     random_data = calculate_read_probability(random_data)
 
-    # Step 5: Display headline with large font in yellow color at the top
-    st.markdown("<h1>The ball is in your court now!</h1>", unsafe_allow_html=True)
-
-    # Step 6: Display the new title with the updated text below the headline
-    st.markdown("<h2 class='sub-title'>How likely is it that you've come this far?</h2>", unsafe_allow_html=True)
-
-    # Step 7: Combine datasets for statistics
     combined_data = pd.concat([data, random_data], ignore_index=True)
 
-    # Step 8: Display datasets and probabilities side by side
     display_side_by_side(data, random_data, combined_data)
-
-    # Step 9: Add Instagram and GitHub Links with IDs at the bottom
-    st.markdown("""
-        <div class="github-instagram">
-            <a href="https://www.instagram.com/arsh1amadadi/" target="_blank">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram">
-                @arsh1amadadi
-            </a>
-            <a href="https://github.com/arshiamadadii" target="_blank">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" alt="GitHub">
-                @arshiamadadii
-            </a>
-        </div>
-    """, unsafe_allow_html=True)
 
 # Run the main function
 if __name__ == "__main__":
